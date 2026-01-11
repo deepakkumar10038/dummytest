@@ -1,28 +1,13 @@
-# Trigger only main for apply
-trigger:
-  branches:
-    include:
-      - main
-
-# PR validation for feature branches (plan only)
-pr:
-  branches:
-    include:
-      - feature/*
-
-pool:
-  name: default
-
 variables:
-  - name: work_dir
-    value: '$(System.DefaultWorkingDirectory)/env/dev'
+- name: work_dir
+  value: '$(System.DefaultWorkingDirectory)/env/dev'
 
 stages:
 
-# Stage for PRs (feature branches) → plan only
+# Plan only for feature branches
 - stage: PlanFeature
   displayName: "Terraform Plan for Feature Branch"
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'Manual'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/'))
+  condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/')
   jobs:
   - job: TerraformPlan
     steps:
@@ -50,7 +35,7 @@ stages:
         workingDirectory: '$(work_dir)'
         environmentServiceNameAzureRM: 'Deepak_serviceconnection'
 
-# Stage for main branch → plan + apply
+# Plan + Apply for main branch
 - stage: ApplyMain
   displayName: "Terraform Plan & Apply on Main"
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
