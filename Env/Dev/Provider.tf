@@ -5,8 +5,14 @@ terraform {
       version = "4.52.0"
     }
   }
-}
 
+  backend "azurerm" {
+    resource_group_name  = "deepak"
+    storage_account_name = "deep57stg"
+    container_name       = "deepcnt"
+    key                  = "terraform.tfstate"
+  }
+}
 
 provider "azurerm" {
   features {}
