@@ -1,6 +1,6 @@
 rgs={
   rg1 = {
-    name     = "deep9999997364699"
+    name     = "deeprg1"
     location = "east us"
   }
   # rg2 = {
