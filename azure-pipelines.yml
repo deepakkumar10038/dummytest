@@ -1,105 +1,87 @@
-# Trigger pipeline for main branch and PRs for feature branches
 trigger:
-  branches:
-    include:
-      - main
+  - main
+  - feature
 
-pr:
-  branches:
-    include:
-      - feature/*
+pool: default
 
-pool:
-  name: default
 
-variables:
-  - name: work_dir
-    value: '$(System.DefaultWorkingDirectory)/env/dev'
-
-# Stage for feature branches → Plan only
-- stage: PlanFeature
-  displayName: "Terraform Plan for Feature Branch"
-  condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/')
-  jobs:
-    - job: TerraformPlan
-      displayName: "Plan Feature Branch"
-      steps:
+stages:
+  - stage: Build
+    displayName: Build
+    jobs:
+      - job: terraforminitandplan
+        displayName: terraform init and plan job
+        pool: default
+        steps:
         - task: TerraformInstaller@1
-          displayName: 'Install Terraform'
           inputs:
             terraformVersion: 'latest'
-
         - task: TerraformTask@5
-          displayName: 'Terraform Init'
           inputs:
             provider: 'azurerm'
             command: 'init'
-            workingDirectory: '$(work_dir)'
-            backendServiceArm: 'Deepak_serviceconnection'
-            backendAzureRmStorageAccountName: 'deep57stg'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/Env/Dev'
+            backendServiceArm: 'Deepak_Service'
+            backendAzureRmStorageAccountName: 'deep55stg'
             backendAzureRmContainerName: 'deepcnt'
-            backendAzureRmKey: 'dev/terraform.tfstate'
-
+            backendAzureRmKey: 'terraform.tfstate'
         - task: TerraformTask@5
-          displayName: 'Terraform Plan'
-          inputs:
-            provider: 'azurerm'
-            command: 'plan'
-            workingDirectory: '$(work_dir)'
-            environmentServiceNameAzureRM: 'Deepak_serviceconnection'
-
-# Stage for main branch → Plan + Apply
-- stage: ApplyMain
-  displayName: "Terraform Plan & Apply on Main"
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
-  jobs:
-    - job: TerraformApply
-      displayName: "Plan & Apply Main Branch"
-      steps:
-        - task: TerraformInstaller@1
-          displayName: 'Install Terraform'
-          inputs:
-            terraformVersion: 'latest'
-
-        - task: TerraformTask@5
-          displayName: 'Terraform Init'
-          inputs:
-            provider: 'azurerm'
-            command: 'init'
-            workingDirectory: '$(work_dir)'
-            backendServiceArm: 'Deepak_serviceconnection'
-            backendAzureRmStorageAccountName: 'deep57stg'
-            backendAzureRmContainerName: 'deepcnt'
-            backendAzureRmKey: 'prod/terraform.tfstate'
-
-        - task: TerraformTask@5
-          displayName: 'Terraform Validate'
           inputs:
             provider: 'azurerm'
             command: 'validate'
-            workingDirectory: '$(work_dir)'
-
+            workingDirectory: '$(System.DefaultWorkingDirectory)/Env/Dev'
         - task: TerraformTask@5
-          displayName: 'Terraform Fmt'
-          inputs:
-            provider: 'azurerm'
-            command: 'custom'
-            customCommand: 'fmt'
-            workingDirectory: '$(work_dir)'
-            environmentServiceNameAzureRM: 'Deepak_serviceconnection'
-
-        - task: TerraformTask@5
-          displayName: 'Terraform Plan'
           inputs:
             provider: 'azurerm'
             command: 'plan'
-            workingDirectory: '$(work_dir)'
-            environmentServiceNameAzureRM: 'Deepak_serviceconnection'
+            environmentServiceNameAzureRM: 'Deepak_Service'
 
+
+  - stage: scanning
+    displayName: scanning
+    jobs:
+      - job: terraformtfsec
+        displayName: tfsec
+        pool: default
+        steps:
+        - task: tfsec@1
+          inputs:
+            version: 'v1.26.0'
+            dir: '$(System.DefaultWorkingDirectory)/Env/Dev'
+
+  - stage: deploy
+    displayName: deploy
+    jobs:
+      - job: manualvalidation
+        displayName: manaul validation
+        pool: server
+        steps:
+        - task: ManualValidation@1
+          inputs:
+            notifyUsers: 'deepakkumar10038@gmail.com'
+            approvers: 'deepakkumar10038@gmail.com'
+
+
+      - job: terraformapply
+        displayName: terraform job apply
+        dependsOn: manualvalidation
+        pool: Default
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        steps:
         - task: TerraformTask@5
-          displayName: 'Terraform Apply'
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/Env/Dev'
+            backendServiceArm: 'Deepak_Service'
+            backendAzureRmStorageAccountName: 'deep57stg'
+            backendAzureRmContainerName: 'deepcnt'
+            backendAzureRmKey: 'terraform.tfstate'
+        - task: TerraformTask@5
           inputs:
             provider: 'azurerm'
             command: 'apply'
-            workingDirectory: '$(work_dir)'
-            environmentServiceNameAzureRM: 'Deepak_serviceconnection'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/Env/Dev'
+            environmentServiceNameAzureRM: 'Deepak_Service'
+
+        
