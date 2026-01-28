@@ -26,11 +26,13 @@ stages:
             backendAzureRmContainerName: 'deepcnt'
             backendAzureRmKey: 'terraform.tfstate'
         - task: TerraformTask@5
+          displayName: Validate Job
           inputs:
             provider: 'azurerm'
             command: 'validate'
             workingDirectory: '$(System.DefaultWorkingDirectory)/env/dev'
         - task: TerraformTask@5
+          displayName: Plan Job
           inputs:
             provider: 'azurerm'
             command: 'plan'
@@ -79,6 +81,7 @@ stages:
             backendAzureRmContainerName: 'deepcnt'
             backendAzureRmKey: 'terraform.tfstate'
         - task: TerraformTask@5
+          displayName: Apply Job
           inputs:
             provider: 'azurerm'
             command: 'apply'
